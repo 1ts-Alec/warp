@@ -304,6 +304,18 @@ impl RequestParams {
                 })
         };
 
+        let custom_model = custom_openai_model
+            .filter(|_| {
+                api_keys
+                    .as_ref()
+                    .is_some_and(|keys| !keys.openai.is_empty())
+            })
+            .map(LLMId::from);
+        let custom_openai_provider_enabled = custom_openai_base_url
+            .as_ref()
+            .is_some_and(|v| !v.trim().is_empty())
+            || custom_model.is_some();
+
         Self {
             input: request_input.all_inputs().cloned().collect(),
             conversation_token: conversation.server_conversation_token,
@@ -323,8 +335,12 @@ impl RequestParams {
                 .map(Into::into)
                 .unwrap_or_else(|| request_input.model_id.clone()),
             coding_model: request_input.coding_model_id.clone(),
-            cli_agent_model: request_input.cli_agent_model_id.clone(),
-            computer_use_model: request_input.computer_use_model_id.clone(),
+            cli_agent_model: custom_model
+                .clone()
+                .unwrap_or_else(|| request_input.cli_agent_model_id.clone()),
+            computer_use_model: custom_model
+                .clone()
+                .unwrap_or_else(|| request_input.computer_use_model_id.clone()),
             is_memory_enabled,
             warp_drive_context_enabled,
             mcp_context,

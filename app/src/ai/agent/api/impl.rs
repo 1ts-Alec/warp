@@ -60,8 +60,10 @@ pub async fn generate_multi_agent_output(
     }
 
     let mut api_keys = params.api_keys;
+    let use_custom_openai_provider = params.custom_openai_provider_enabled;
     if let Some(api_keys) = &mut api_keys {
-        api_keys.allow_use_of_warp_credits = params.allow_use_of_warp_credits_with_byok;
+        api_keys.allow_use_of_warp_credits =
+            params.allow_use_of_warp_credits_with_byok && !use_custom_openai_provider;
     }
 
     let request = api::Request {
@@ -143,6 +145,18 @@ pub async fn generate_multi_agent_output(
             .map(|suggestions| suggestions.into()),
         mcp_context: params.mcp_context.map(Into::into),
     };
+
+    if params.custom_openai_provider_enabled {
+        let (tx, rx) = async_channel::unbounded();
+        let _ = tx
+            .send(Err(Arc::new(crate::server::server_api::AIApiError::Other(
+                anyhow::anyhow!(
+                    "Custom provider direct networking is required, but direct provider transport is not implemented in this client path yet."
+                ),
+            ))))
+            .await;
+        return Ok(Box::pin(rx));
+    }
 
     let response_stream = server_api.generate_multi_agent_output(&request).await;
     match response_stream {
