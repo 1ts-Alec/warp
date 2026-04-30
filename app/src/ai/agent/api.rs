@@ -322,8 +322,13 @@ impl RequestParams {
             context_window_limit,
             metadata,
             session_context,
-            model: custom_model
-                .clone()
+            model: custom_openai_model
+                .filter(|_| {
+                    api_keys
+                        .as_ref()
+                        .is_some_and(|keys| !keys.openai.is_empty())
+                })
+                .map(Into::into)
                 .unwrap_or_else(|| request_input.model_id.clone()),
             coding_model: request_input.coding_model_id.clone(),
             cli_agent_model: custom_model
