@@ -6273,6 +6273,8 @@ impl SettingsWidget for CloudAgentComputerUseWidget {
 
 struct ApiKeysWidget {
     openai_api_key_editor: ViewHandle<EditorView>,
+    openai_base_url_editor: ViewHandle<EditorView>,
+    openai_model_editor: ViewHandle<EditorView>,
     anthropic_api_key_editor: ViewHandle<EditorView>,
     google_api_key_editor: ViewHandle<EditorView>,
 
@@ -6286,6 +6288,8 @@ impl ApiKeysWidget {
         let workspace_handle = UserWorkspaces::handle(ctx);
         let is_any_ai_enabled = ai_settings.is_any_ai_enabled(ctx);
         let is_byo_enabled = workspace_handle.as_ref(ctx).is_byo_api_key_enabled();
+        let custom_openai_base_url = ai_settings.custom_openai_base_url.value().clone();
+        let custom_openai_model = ai_settings.custom_openai_model.value().clone();
 
         let ApiKeys {
             openai: openai_key,
@@ -6379,8 +6383,76 @@ impl ApiKeysWidget {
             "AIzaSy..."
         );
 
+        let openai_base_url_editor = ctx.add_typed_action_view(move |ctx| {
+            let appearance = Appearance::as_ref(ctx);
+            let mut editor = EditorView::single_line(
+                SingleLineEditorOptions {
+                    text: TextOptions {
+                        font_size_override: Some(appearance.ui_font_size()),
+                        font_family_override: Some(appearance.monospace_font_family()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ctx,
+            );
+            editor.set_placeholder_text("https://api.example.com/v1", ctx);
+            editor.set_buffer_text(custom_openai_base_url.as_deref().unwrap_or_default(), ctx);
+            editor
+        });
+        AISettingsPageView::update_editor_interaction_state(
+            openai_base_url_editor.clone(),
+            is_any_ai_enabled && is_byo_enabled,
+            ctx,
+        );
+        ctx.subscribe_to_view(&openai_base_url_editor, |_, editor, event, ctx| {
+            if matches!(event, EditorEvent::Blurred | EditorEvent::Enter) {
+                let value = editor.as_ref(ctx).buffer_text(ctx);
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    let _ = settings
+                        .custom_openai_base_url
+                        .set_value((!value.trim().is_empty()).then_some(value), ctx);
+                });
+            }
+        });
+
+        let openai_model_editor = ctx.add_typed_action_view(move |ctx| {
+            let appearance = Appearance::as_ref(ctx);
+            let mut editor = EditorView::single_line(
+                SingleLineEditorOptions {
+                    text: TextOptions {
+                        font_size_override: Some(appearance.ui_font_size()),
+                        font_family_override: Some(appearance.monospace_font_family()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ctx,
+            );
+            editor.set_placeholder_text("gpt-4.1-mini", ctx);
+            editor.set_buffer_text(custom_openai_model.as_deref().unwrap_or_default(), ctx);
+            editor
+        });
+        AISettingsPageView::update_editor_interaction_state(
+            openai_model_editor.clone(),
+            is_any_ai_enabled && is_byo_enabled,
+            ctx,
+        );
+        ctx.subscribe_to_view(&openai_model_editor, |_, editor, event, ctx| {
+            if matches!(event, EditorEvent::Blurred | EditorEvent::Enter) {
+                let value = editor.as_ref(ctx).buffer_text(ctx);
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    let _ = settings
+                        .custom_openai_model
+                        .set_value((!value.trim().is_empty()).then_some(value), ctx);
+                });
+            }
+        });
+
         Self {
             openai_api_key_editor,
+            openai_base_url_editor,
+            openai_model_editor,
             anthropic_api_key_editor,
             google_api_key_editor,
 
@@ -6455,6 +6527,20 @@ impl ApiKeysWidget {
             appearance,
             "OpenAI API Key",
             self.openai_api_key_editor.clone(),
+            is_enabled,
+            app,
+        ));
+        column.add_child(render_api_key_input(
+            appearance,
+            "OpenAI-Compatible Base URL (Optional)",
+            self.openai_base_url_editor.clone(),
+            is_enabled,
+            app,
+        ));
+        column.add_child(render_api_key_input(
+            appearance,
+            "OpenAI-Compatible Model ID (Optional)",
+            self.openai_model_editor.clone(),
             is_enabled,
             app,
         ));
@@ -6568,7 +6654,7 @@ impl SettingsWidget for ApiKeysWidget {
     type View = AISettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "api keys bring your own byo openai anthropic google claude gemini gpt"
+        "api keys bring your own byo openai anthropic google claude gemini gpt base url endpoint custom model"
     }
 
     fn render(

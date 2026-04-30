@@ -1204,6 +1204,26 @@ define_settings_group!(AISettings, settings: [
         description: "Whether Warp credits can be used even when providing your own API key.",
     }
 
+    custom_openai_base_url: CustomOpenAIBaseURL {
+        type: Option<String>,
+        default: None,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        private: false,
+        toml_path: "cloud_platform.third_party_api_keys.custom_openai_base_url",
+        description: "Custom OpenAI-compatible base URL used for BYOK OpenAI requests.",
+    }
+
+    custom_openai_model: CustomOpenAIModel {
+        type: Option<String>,
+        default: None,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        private: false,
+        toml_path: "cloud_platform.third_party_api_keys.custom_openai_model",
+        description: "Custom OpenAI-compatible model ID used for BYOK OpenAI requests.",
+    }
+
     should_render_use_agent_footer_for_user_commands: ShouldRenderUseAgentToolbarForUserCommands {
         type: bool,
         default: true,

@@ -46,6 +46,14 @@ pub async fn generate_multi_agent_output(
             },
         );
     }
+    if let Some(base_url) = params.custom_openai_base_url.clone() {
+        logging_metadata.insert(
+            "custom_openai_base_url".to_owned(),
+            prost_types::Value {
+                kind: Some(prost_types::value::Kind::StringValue(base_url)),
+            },
+        );
+    }
 
     if params.should_redact_secrets {
         redaction::redact_inputs(&mut params.input);
