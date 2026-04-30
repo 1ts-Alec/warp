@@ -118,6 +118,7 @@ pub struct RequestParams {
     /// User-provided API keys for AI providers (BYO API Key).
     pub api_keys: Option<warp_multi_agent_api::request::settings::ApiKeys>,
     pub allow_use_of_warp_credits_with_byok: bool,
+    pub custom_openai_base_url: Option<String>,
     pub autonomy_level: warp_multi_agent_api::AutonomyLevel,
     pub isolation_level: warp_multi_agent_api::IsolationLevel,
     pub web_search_enabled: bool,
@@ -241,6 +242,8 @@ impl RequestParams {
         );
         let allow_use_of_warp_credits_with_byok =
             *AISettings::as_ref(app).can_use_warp_credits_with_byok;
+        let custom_openai_base_url = AISettings::as_ref(app).custom_openai_base_url.clone();
+        let custom_openai_model = AISettings::as_ref(app).custom_openai_model.clone();
 
         let app_execution_mode = AppExecutionMode::as_ref(app);
         let autonomy_level = if app_execution_mode.is_autonomous() {
@@ -311,7 +314,14 @@ impl RequestParams {
             context_window_limit,
             metadata,
             session_context,
-            model: request_input.model_id.clone(),
+            model: custom_openai_model
+                .filter(|_| {
+                    api_keys
+                        .as_ref()
+                        .is_some_and(|keys| !keys.openai.is_empty())
+                })
+                .map(Into::into)
+                .unwrap_or_else(|| request_input.model_id.clone()),
             coding_model: request_input.coding_model_id.clone(),
             cli_agent_model: request_input.cli_agent_model_id.clone(),
             computer_use_model: request_input.computer_use_model_id.clone(),
@@ -322,6 +332,7 @@ impl RequestParams {
             should_redact_secrets,
             api_keys,
             allow_use_of_warp_credits_with_byok,
+            custom_openai_base_url,
             autonomy_level,
             isolation_level,
             web_search_enabled,
