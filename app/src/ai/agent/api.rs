@@ -311,6 +311,10 @@ impl RequestParams {
                     .is_some_and(|keys| !keys.openai.is_empty())
             })
             .map(LLMId::from);
+        let custom_openai_provider_enabled = custom_openai_base_url
+            .as_ref()
+            .is_some_and(|v| !v.trim().is_empty())
+            || custom_model.is_some();
 
         Self {
             input: request_input.all_inputs().cloned().collect(),
