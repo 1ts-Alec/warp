@@ -119,7 +119,6 @@ pub struct RequestParams {
     pub api_keys: Option<warp_multi_agent_api::request::settings::ApiKeys>,
     pub allow_use_of_warp_credits_with_byok: bool,
     pub custom_openai_base_url: Option<String>,
-    pub custom_openai_provider_enabled: bool,
     pub autonomy_level: warp_multi_agent_api::AutonomyLevel,
     pub isolation_level: warp_multi_agent_api::IsolationLevel,
     pub web_search_enabled: bool,
@@ -327,8 +326,13 @@ impl RequestParams {
             context_window_limit,
             metadata,
             session_context,
-            model: custom_model
-                .clone()
+            model: custom_openai_model
+                .filter(|_| {
+                    api_keys
+                        .as_ref()
+                        .is_some_and(|keys| !keys.openai.is_empty())
+                })
+                .map(Into::into)
                 .unwrap_or_else(|| request_input.model_id.clone()),
             coding_model: request_input.coding_model_id.clone(),
             cli_agent_model: custom_model
@@ -345,7 +349,6 @@ impl RequestParams {
             api_keys,
             allow_use_of_warp_credits_with_byok,
             custom_openai_base_url,
-            custom_openai_provider_enabled,
             autonomy_level,
             isolation_level,
             web_search_enabled,
